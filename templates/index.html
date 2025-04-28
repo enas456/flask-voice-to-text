@@ -2,9 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Voice to Text Converter</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -54,6 +52,11 @@
             font-size: 1.2em;
             color: #333;
         }
+        .formats {
+            font-size: 0.9em;
+            color: gray;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -66,8 +69,9 @@
     <!-- File Upload Section -->
     <div class="input-container">
         <h2>Option 1: Upload Audio File</h2>
+        <p class="formats">Supported formats: <strong>mp3, wav, ogg, flac, m4a, aac, wma, amr</strong></p>
         <form id="uploadForm" action="/upload" method="POST" enctype="multipart/form-data">
-            <input type="file" name="file" accept=".mp3, .wav" required>
+            <input type="file" name="file" accept="audio/*" required>
             <button type="submit">Upload and Convert</button>
         </form>
     </div>
@@ -87,33 +91,36 @@
     let audioChunks = [];
 
     function startRecording() {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    mediaRecorder = new MediaRecorder(stream);
-                    mediaRecorder.ondataavailable = event => {
-                        audioChunks.push(event.data);
-                    };
-                    mediaRecorder.onstop = () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                        sendAudioToServer(audioBlob);
-                        audioChunks = []; // Reset
-                    };
-                    mediaRecorder.start();
-                    document.getElementById('status').innerText = "Recording...";
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
 
-                    setTimeout(() => {
-                        mediaRecorder.stop();
-                        document.getElementById('status').innerText = "Recording stopped. Processing...";
-                    }, 5000);
-                })
-                .catch(err => {
-                    console.error('Error:', err);
-                    document.getElementById('status').innerText = "Failed to access microphone.";
-                });
-        } else {
-            alert("Your browser does not support recording.");
-        }
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    sendAudioToServer(audioBlob);
+                };
+
+                mediaRecorder.start();
+                document.getElementById('recordButton').innerText = "Stop Recording";
+                document.getElementById('recordButton').onclick = stopRecording;
+                document.getElementById('status').innerText = "Recording... Tap to Stop.";
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                document.getElementById('status').innerText = "Failed to access microphone.";
+            });
+    }
+
+    function stopRecording() {
+        mediaRecorder.stop();
+        document.getElementById('recordButton').innerText = "Start Recording";
+        document.getElementById('recordButton').onclick = startRecording;
+        document.getElementById('status').innerText = "Recording stopped. Processing...";
     }
 
     function sendAudioToServer(audioBlob) {
@@ -124,7 +131,7 @@
             method: 'POST',
             body: formData,
             headers: {
-                'X-Requested-With': 'XMLHttpRequest' // So server knows it's AJAX
+                'X-Requested-With': 'XMLHttpRequest'
             }
         })
         .then(response => response.json())
