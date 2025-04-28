@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 # Configuration
 UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'mp3', 'wav'}
+ALLOWED_EXTENSIONS = {'mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'wma', 'amr'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -57,24 +57,26 @@ def upload_file():
         filename = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
         file.save(filename)
 
-        # Convert MP3 to WAV if needed
-        if file.filename.lower().endswith('.mp3'):
-            sound = AudioSegment.from_mp3(filename)
+        # Always convert uploaded file to WAV
+        try:
+            sound = AudioSegment.from_file(filename)
             filename_wav = filename.rsplit('.', 1)[0] + '.wav'
             sound.export(filename_wav, format="wav")
-            os.remove(filename)  # Remove original MP3
-            filename = filename_wav  # Use WAV
+            os.remove(filename)  # Remove the original uploaded file
+            filename = filename_wav  # Now use the WAV version
+        except Exception as e:
+            return jsonify({"error": f"Failed to process audio file: {str(e)}"})
 
-        # Convert to text
+        # Convert speech to text
         converted_text = speech_to_text_from_file(filename)
 
-        # Handle depending on request type
+        # Return response
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"text": converted_text})
         else:
             return render_template('result.html', text=converted_text)
 
-    return jsonify({"error": "Invalid file format. Please upload an MP3 or WAV file."})
+    return jsonify({"error": "Invalid file format. Please upload a valid audio file."})
 
 # Main
 if __name__ == "__main__":

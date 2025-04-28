@@ -3,89 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <title>Voice to Text Converter</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f7fc;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            width: 100%;
-            max-width: 600px;
-        }
-        h1 {
-            font-size: 2.5em;
-            color: #333;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1.2em;
-            margin-top: 20px;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        .recording {
-            margin-top: 20px;
-            font-size: 1.5em;
-            color: #f44336;
-        }
-        .input-container {
-            margin-top: 20px;
-        }
-        .output {
-            margin-top: 30px;
-            font-size: 1.2em;
-            color: #333;
-        }
-        .formats {
-            font-size: 0.9em;
-            color: gray;
-            margin-top: 5px;
-        }
-    </style>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
+<body class="bg-light">
 
-<div class="container">
-    <h1>Voice to Text Converter</h1>
+<div class="container py-5">
+    <div class="card shadow-lg p-4">
+        <h1 class="text-center mb-4">🎤 Voice to Text Converter</h1>
 
-    <p>Choose one of the options below:</p>
+        <!-- Upload Audio Section -->
+        <div class="mb-5">
+            <h3 class="mb-3">Option 1: Upload Audio File</h3>
+            <p class="text-muted">Supported formats: <strong>mp3, wav, ogg, flac, m4a, aac, wma, amr</strong></p>
+            <form id="uploadForm" action="/upload" method="POST" enctype="multipart/form-data">
+                <input type="file" class="form-control" name="file" accept="audio/*" required>
+                <button type="submit" class="btn btn-success mt-3 w-100">Upload and Convert</button>
+            </form>
+        </div>
 
-    <!-- File Upload Section -->
-    <div class="input-container">
-        <h2>Option 1: Upload Audio File</h2>
-        <p class="formats">Supported formats: <strong>mp3, wav, ogg, flac, m4a, aac, wma, amr</strong></p>
-        <form id="uploadForm" action="/upload" method="POST" enctype="multipart/form-data">
-            <input type="file" name="file" accept="audio/*" required>
-            <button type="submit">Upload and Convert</button>
-        </form>
+        <!-- Record Audio Section -->
+        <div class="mb-5 text-center">
+            <h3 class="mb-3">Option 2: Record Your Voice</h3>
+            <button id="recordButton" class="btn btn-primary btn-lg" onclick="startRecording()">Start Recording</button>
+            <p id="status" class="text-danger mt-3"></p>
+        </div>
+
+        <!-- Output Section -->
+        <div id="textResult" class="alert alert-secondary d-none" role="alert">
+            <!-- Converted text will appear here -->
+        </div>
     </div>
-
-    <!-- Voice Recording Section -->
-    <div class="input-container">
-        <h2>Option 2: Record Your Voice</h2>
-        <button id="recordButton" onclick="startRecording()">Start Recording</button>
-        <p id="status" class="recording"></p>
-    </div>
-
-    <div id="textResult" class="output"></div>
 </div>
 
+<!-- JavaScript: Start/Stop Recording -->
 <script>
     let mediaRecorder;
     let audioChunks = [];
@@ -107,8 +58,10 @@
 
                 mediaRecorder.start();
                 document.getElementById('recordButton').innerText = "Stop Recording";
+                document.getElementById('recordButton').classList.remove('btn-primary');
+                document.getElementById('recordButton').classList.add('btn-danger');
                 document.getElementById('recordButton').onclick = stopRecording;
-                document.getElementById('status').innerText = "Recording... Tap to Stop.";
+                document.getElementById('status').innerText = "Recording... Click to Stop.";
             })
             .catch(err => {
                 console.error('Error:', err);
@@ -119,6 +72,8 @@
     function stopRecording() {
         mediaRecorder.stop();
         document.getElementById('recordButton').innerText = "Start Recording";
+        document.getElementById('recordButton').classList.remove('btn-danger');
+        document.getElementById('recordButton').classList.add('btn-primary');
         document.getElementById('recordButton').onclick = startRecording;
         document.getElementById('status').innerText = "Recording stopped. Processing...";
     }
@@ -136,14 +91,21 @@
         })
         .then(response => response.json())
         .then(data => {
-            document.getElementById('textResult').innerText = "Converted Text: " + data.text;
+            const resultDiv = document.getElementById('textResult');
+            resultDiv.innerText = "Converted Text: " + data.text;
+            resultDiv.classList.remove('d-none');
         })
         .catch(error => {
             console.error("Error:", error);
-            document.getElementById('textResult').innerText = "Error processing audio.";
+            const resultDiv = document.getElementById('textResult');
+            resultDiv.innerText = "Error processing audio.";
+            resultDiv.classList.remove('d-none');
         });
     }
 </script>
+
+<!-- Bootstrap JS Bundle (optional, if you want fancy animations) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>
