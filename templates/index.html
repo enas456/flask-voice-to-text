@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice to Text Converter</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7fc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 600px;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #333;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.2em;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .recording {
+            margin-top: 20px;
+            font-size: 1.5em;
+            color: #f44336;
+        }
+        .input-container {
+            margin-top: 20px;
+        }
+        .output {
+            margin-top: 30px;
+            font-size: 1.2em;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Voice to Text Converter</h1>
+
+    <p>Choose one of the options below:</p>
+
+    <!-- File Upload Section -->
+    <div class="input-container">
+        <h2>Option 1: Upload Audio File</h2>
+        <form id="uploadForm" action="/upload" method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".mp3, .wav" required>
+            <button type="submit">Upload and Convert</button>
+        </form>
+    </div>
+
+    <!-- Voice Recording Section -->
+    <div class="input-container">
+        <h2>Option 2: Record Your Voice</h2>
+        <button id="recordButton" onclick="startRecording()">Start Recording</button>
+        <p id="status" class="recording"></p>
+    </div>
+
+    <div id="textResult" class="output"></div>
+</div>
+
+<script>
+    let mediaRecorder;
+    let audioChunks = [];
+    let audioBlob;
+    let audioUrl;
+    let audio;
+
+    // Function for starting recording
+    function startRecording() {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        audioUrl = URL.createObjectURL(audioBlob);
+                        audio = new Audio(audioUrl);
+                        sendAudioToServer(audioBlob);  // Send the audio to the server
+                    };
+
+                    mediaRecorder.start();
+                    document.getElementById('status').innerText = "Recording...";
+
+                    // Stop after 5 seconds
+                    setTimeout(() => {
+                        stopRecording();
+                    }, 5000); // Change this duration as needed
+                })
+                .catch(err => {
+                    console.error('Error accessing media devices:', err);
+                    document.getElementById('status').innerText = "Failed to access microphone.";
+                });
+        } else {
+            alert("Your browser does not support voice recording.");
+        }
+    }
+
+    // Stop recording
+    function stopRecording() {
+        mediaRecorder.stop();
+        document.getElementById('status').innerText = "Recording stopped. Processing...";
+    }
+
+    // Send the recorded audio to the server
+    function sendAudioToServer(audioBlob) {
+        let formData = new FormData();
+        formData.append('file', audioBlob, 'recording.wav');
+
+        fetch('/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('textResult').innerText = "Converted Text: " + data.text;
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            document.getElementById('textResult').innerText = "Error processing audio.";
+        });
+    }
+</script>
+
+</body>
+</html>
