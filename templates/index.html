@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Voice to Text Converter</title>
     <!-- Bootstrap CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
@@ -14,21 +15,21 @@
 
         <!-- Upload Audio Section -->
         <div class="mb-5">
-            <h3 class="mb-3">Option 1: Upload Audio File</h3>
-            <p class="text-muted">Supported formats: <strong>mp3, wav, ogg, flac, m4a, aac, wma, amr</strong></p>
-            <form id="uploadForm" action="/upload" method="POST" enctype="multipart/form-data">
+            <h3 class="mb-3 text-center">Option 1: Upload Audio File</h3>
+            <p class="text-muted text-center">Supported formats: <strong>mp3, wav, ogg, flac, m4a, aac, wma, amr</strong></p>
+            <form id="uploadForm" action="/upload" method="POST" enctype="multipart/form-data" class="d-grid gap-2">
                 <input type="file" class="form-control" name="file" accept="audio/*" required>
-                <button type="submit" class="btn btn-success mt-3 w-100">Upload and Convert</button>
+                <button type="submit" class="btn btn-success w-100 mt-3">Upload and Convert</button>
             </form>
         </div>
 
         <!-- Record Audio Section -->
         <div class="mb-5 text-center">
             <h3 class="mb-3">Option 2: Record Your Voice</h3>
-            <button id="recordButton" class="btn btn-primary btn-lg" onclick="startRecording()">Start Recording</button>
+            <button id="recordButton" class="btn btn-primary btn-lg w-100" onclick="startRecording()">Start Recording</button>
             <p id="status" class="text-danger mt-3"></p>
 
-            <!-- 🆕 Here is the div for recorded audio preview -->
+            <!-- Audio player -->
             <div id="playerDiv" class="mt-4"></div>
         </div>
 
@@ -64,14 +65,15 @@
                 mediaRecorder.onstop = () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
 
-                    // 🆕 Play the recorded audio
+                    // Play recorded audio
                     const audioUrl = URL.createObjectURL(audioBlob);
                     const audioPlayer = document.createElement('audio');
                     audioPlayer.controls = true;
                     audioPlayer.src = audioUrl;
+                    audioPlayer.classList.add('w-100'); // Make player 100% width
 
                     const playerDiv = document.getElementById('playerDiv');
-                    playerDiv.innerHTML = '';  // Clear old players
+                    playerDiv.innerHTML = '';
                     playerDiv.appendChild(audioPlayer);
 
                     sendAudioToServer(audioBlob);
@@ -82,7 +84,7 @@
                 document.getElementById('recordButton').classList.remove('btn-primary');
                 document.getElementById('recordButton').classList.add('btn-danger');
                 document.getElementById('recordButton').onclick = stopRecording;
-                document.getElementById('status').innerText = "Recording... Click to Stop.";
+                document.getElementById('status').innerText = "Recording... Tap to Stop.";
             })
             .catch(err => {
                 console.error('Microphone error:', err);
@@ -105,12 +107,11 @@
         const formData = new FormData();
         formData.append('file', audioBlob, 'recording.wav');
 
-        // 🆕 Show spinner while waiting
         const resultDiv = document.getElementById('textResult');
         resultDiv.innerHTML = `
             <div class="text-center">
                 <div class="spinner-border text-primary" role="status">
-                  <span class="visually-hidden">Loading...</span>
+                    <span class="visually-hidden">Loading...</span>
                 </div>
                 <p class="mt-3">Converting speech to text, please wait...</p>
             </div>
