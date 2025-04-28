@@ -85,59 +85,47 @@
 <script>
     let mediaRecorder;
     let audioChunks = [];
-    let audioBlob;
-    let audioUrl;
-    let audio;
 
-    // Function for starting recording
     function startRecording() {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(stream => {
                     mediaRecorder = new MediaRecorder(stream);
-
                     mediaRecorder.ondataavailable = event => {
                         audioChunks.push(event.data);
                     };
-
                     mediaRecorder.onstop = () => {
-                        audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                        audioUrl = URL.createObjectURL(audioBlob);
-                        audio = new Audio(audioUrl);
-                        sendAudioToServer(audioBlob);  // Send the audio to the server
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        sendAudioToServer(audioBlob);
+                        audioChunks = []; // Reset
                     };
-
                     mediaRecorder.start();
                     document.getElementById('status').innerText = "Recording...";
 
-                    // Stop after 5 seconds
                     setTimeout(() => {
-                        stopRecording();
-                    }, 5000); // Change this duration as needed
+                        mediaRecorder.stop();
+                        document.getElementById('status').innerText = "Recording stopped. Processing...";
+                    }, 5000);
                 })
                 .catch(err => {
-                    console.error('Error accessing media devices:', err);
+                    console.error('Error:', err);
                     document.getElementById('status').innerText = "Failed to access microphone.";
                 });
         } else {
-            alert("Your browser does not support voice recording.");
+            alert("Your browser does not support recording.");
         }
     }
 
-    // Stop recording
-    function stopRecording() {
-        mediaRecorder.stop();
-        document.getElementById('status').innerText = "Recording stopped. Processing...";
-    }
-
-    // Send the recorded audio to the server
     function sendAudioToServer(audioBlob) {
-        let formData = new FormData();
+        const formData = new FormData();
         formData.append('file', audioBlob, 'recording.wav');
 
         fetch('/upload', {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest' // So server knows it's AJAX
+            }
         })
         .then(response => response.json())
         .then(data => {
