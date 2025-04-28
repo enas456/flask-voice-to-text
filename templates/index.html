@@ -27,6 +27,9 @@
             <h3 class="mb-3">Option 2: Record Your Voice</h3>
             <button id="recordButton" class="btn btn-primary btn-lg" onclick="startRecording()">Start Recording</button>
             <p id="status" class="text-danger mt-3"></p>
+
+            <!-- 🆕 Here is the div for recorded audio preview -->
+            <div id="playerDiv" class="mt-4"></div>
         </div>
 
         <!-- Output Section -->
@@ -36,23 +39,41 @@
     </div>
 </div>
 
-<!-- JavaScript: Start/Stop Recording -->
+<!-- JavaScript Section -->
 <script>
     let mediaRecorder;
     let audioChunks = [];
 
     function startRecording() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("Your browser does not support audio recording.");
+            return;
+        }
+
         navigator.mediaDevices.getUserMedia({ audio: true })
             .then(stream => {
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
 
                 mediaRecorder.ondataavailable = event => {
-                    audioChunks.push(event.data);
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
                 };
 
                 mediaRecorder.onstop = () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+
+                    // 🆕 Play the recorded audio
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audioPlayer = document.createElement('audio');
+                    audioPlayer.controls = true;
+                    audioPlayer.src = audioUrl;
+
+                    const playerDiv = document.getElementById('playerDiv');
+                    playerDiv.innerHTML = '';  // Clear old players
+                    playerDiv.appendChild(audioPlayer);
+
                     sendAudioToServer(audioBlob);
                 };
 
@@ -64,13 +85,15 @@
                 document.getElementById('status').innerText = "Recording... Click to Stop.";
             })
             .catch(err => {
-                console.error('Error:', err);
-                document.getElementById('status').innerText = "Failed to access microphone.";
+                console.error('Microphone error:', err);
+                document.getElementById('status').innerText = "Microphone access denied.";
             });
     }
 
     function stopRecording() {
-        mediaRecorder.stop();
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+            mediaRecorder.stop();
+        }
         document.getElementById('recordButton').innerText = "Start Recording";
         document.getElementById('recordButton').classList.remove('btn-danger');
         document.getElementById('recordButton').classList.add('btn-primary');
@@ -82,6 +105,18 @@
         const formData = new FormData();
         formData.append('file', audioBlob, 'recording.wav');
 
+        // 🆕 Show spinner while waiting
+        const resultDiv = document.getElementById('textResult');
+        resultDiv.innerHTML = `
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3">Converting speech to text, please wait...</p>
+            </div>
+        `;
+        resultDiv.classList.remove('d-none');
+
         fetch('/upload', {
             method: 'POST',
             body: formData,
@@ -91,20 +126,16 @@
         })
         .then(response => response.json())
         .then(data => {
-            const resultDiv = document.getElementById('textResult');
-            resultDiv.innerText = "Converted Text: " + data.text;
-            resultDiv.classList.remove('d-none');
+            resultDiv.innerHTML = "🎯 Converted Text: " + data.text;
         })
         .catch(error => {
-            console.error("Error:", error);
-            const resultDiv = document.getElementById('textResult');
-            resultDiv.innerText = "Error processing audio.";
-            resultDiv.classList.remove('d-none');
+            console.error("Error sending audio:", error);
+            resultDiv.innerHTML = "❗ Error processing audio.";
         });
     }
 </script>
 
-<!-- Bootstrap JS Bundle (optional, if you want fancy animations) -->
+<!-- Bootstrap Bundle (optional) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
